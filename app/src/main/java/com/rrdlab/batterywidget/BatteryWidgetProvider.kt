@@ -7,6 +7,11 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
+import android.view.View
 import android.widget.RemoteViews
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -115,6 +120,19 @@ class BatteryWidgetProvider : AppWidgetProvider() {
             )
         }
 
+        private const val CHARGE_COLOR = 0xFF5CF2B0.toInt()
+        private const val DISCHARGE_COLOR = 0xFFFFB35C.toInt()
+        private const val MUTED_COLOR = 0xFFB8C4D8.toInt()
+
+        /** Big [value] with a smaller muted [unit]. */
+        private fun number(value: String, unit: String): CharSequence =
+            SpannableStringBuilder(value).apply {
+                val start = length
+                append(" ").append(unit)
+                setSpan(RelativeSizeSpan(0.5f), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(ForegroundColorSpan(MUTED_COLOR), start, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
         private fun render(c: Context, l: Lines): RemoteViews {
             val v = RemoteViews(c.packageName, R.layout.widget_battery)
             val tap = PendingIntent.getBroadcast(
@@ -123,6 +141,41 @@ class BatteryWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
             v.setOnClickPendingIntent(R.id.root, tap)
+
+            val loc = Locale.getDefault()
+            val accent = if (l.chargeLive) CHARGE_COLOR else DISCHARGE_COLOR
+            v.setTextViewText(
+                R.id.w_state,
+                c.getString(
+                    when {
+                        l.full -> R.string.full
+                        l.chargeLive -> R.string.state_charging
+                        else -> R.string.state_discharging
+                    },
+                ),
+            )
+            v.setTextColor(R.id.w_state, accent)
+            // + energy flows into the battery, - out of it
+            v.setTextViewText(
+                R.id.w_power,
+                l.watts?.let { number(String.format(loc, "%s%.2f", if (l.chargeLive) "+" else "\u2212", it), c.getString(R.string.unit_w)) } ?: "\u2014",
+            )
+            v.setTextColor(R.id.w_power, accent)
+            v.setTextViewText(R.id.w_level, l.level?.let { number("$it", "%") } ?: "\u2014")
+
+            val progress = (l.level ?: 0) * 10
+            v.setProgressBar(R.id.bar_charge, 1000, progress, false)
+            v.setProgressBar(R.id.bar_discharge, 1000, progress, false)
+            v.setViewVisibility(R.id.bar_charge, if (l.chargeLive) View.VISIBLE else View.INVISIBLE)
+            v.setViewVisibility(R.id.bar_discharge, if (l.chargeLive) View.INVISIBLE else View.VISIBLE)
+
+            val meta = listOfNotNull(
+                l.volts?.let { String.format(loc, "%.2f %s", it, c.getString(R.string.unit_v)) },
+                l.ma?.let { String.format(loc, "%,d %s", Math.round(it), c.getString(R.string.unit_ma)) },
+                l.tempC?.let { String.format(loc, "%.1f %s", it, c.getString(R.string.unit_c)) },
+            )
+            v.setTextViewText(R.id.w_meta, meta.joinToString("  \u00B7  "))
+
             v.setTextViewText(R.id.line_discharge, l.discharge)
             v.setTextColor(R.id.line_discharge, if (l.dischargeLive) Color.WHITE else DIM)
             v.setTextViewText(R.id.line_charge, l.charge)

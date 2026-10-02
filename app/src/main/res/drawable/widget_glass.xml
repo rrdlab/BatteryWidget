@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- tinted translucent body: wallpaper shows through -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:startColor="#C71B1457" android:centerColor="#BF0F3C63" android:endColor="#C7096A6E" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+    <!-- top gloss -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="270" android:startColor="#38FFFFFF" android:centerColor="#0DFFFFFF" android:endColor="#00FFFFFF" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+    <!-- glass edge -->
+    <item>
+        <shape android:shape="rectangle">
+            <stroke android:width="1dp" android:color="#59FFFFFF" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+</layer-list>

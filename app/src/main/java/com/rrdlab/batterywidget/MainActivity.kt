@@ -5,10 +5,11 @@ import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Intent
-import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -24,6 +25,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.ScrollView
@@ -44,14 +46,17 @@ class MainActivity : Activity() {
         const val FAST_STEP_MS = 1_000L
         const val MAX_READINGS = 12   // ~1 min at 5 s, ~12 s at 1 s: enough to average out load spikes
 
-        val BG = Color.parseColor("#0F1115")
-        val CARD = Color.parseColor("#1A1D24")
-        val TEXT = Color.parseColor("#F2F4F8")
-        val MUTED = Color.parseColor("#8A93A3")
-        val CHARGE = Color.parseColor("#3DDC84")
-        val DISCHARGE = Color.parseColor("#FF9F43")
+        val TOP = Color.parseColor("#1A1250")
+        val MID = Color.parseColor("#0F3C63")
+        val BOTTOM = Color.parseColor("#08585F")
+        val TEXT = Color.parseColor("#F4F7FB")
+        val MUTED = Color.parseColor("#B8C4D8")
+        val TRACK = Color.parseColor("#26FFFFFF")
+        val CHARGE = Color.parseColor("#5CF2B0")
+        val DISCHARGE = Color.parseColor("#FFB35C")
     }
 
+    private lateinit var barFill: GradientDrawable
     private lateinit var stateView: TextView
     private lateinit var levelView: TextView
     private lateinit var levelBar: ProgressBar
@@ -85,8 +90,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BatteryWidgetProvider.schedule(this)
-        window.statusBarColor = BG
-        window.navigationBarColor = BG
+        window.statusBarColor = TOP
+        window.navigationBarColor = BOTTOM
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -100,9 +105,14 @@ class MainActivity : Activity() {
         header.addView(levelView)
         header.addView(stateView)
         root.addView(header)
+        val track = GradientDrawable().apply { setColor(TRACK); cornerRadius = dp(4).toFloat() }
+        barFill = GradientDrawable().apply { setColor(CHARGE); cornerRadius = dp(4).toFloat() }
         levelBar = ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal).apply {
             max = 1000
-            progressBackgroundTintList = ColorStateList.valueOf(CARD)
+            progressDrawable = LayerDrawable(arrayOf(track, ClipDrawable(barFill, Gravity.START, ClipDrawable.HORIZONTAL))).apply {
+                setId(0, android.R.id.background)
+                setId(1, android.R.id.progress)
+            }
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(8))
                 .also { it.topMargin = dp(8) }
         }
@@ -140,12 +150,14 @@ class MainActivity : Activity() {
         // Controls
         statusView = text(13f, MUTED).apply { setPadding(0, dp(16), 0, 0) }
         root.addView(statusView)
-        root.addView(button(R.string.btn_refresh, CHARGE, Color.BLACK) { start(FAST_STEP_MS) }, cardParams(top = 8))
-        root.addView(button(R.string.btn_add_widget, CARD, TEXT) { pinWidget() }, cardParams(top = 8))
-        root.addView(button(R.string.btn_battery, CARD, TEXT) { requestUnrestricted() }, cardParams(top = 8))
+        root.addView(button(R.string.btn_refresh, CHARGE, Color.parseColor("#052A3A")) { start(FAST_STEP_MS) }, cardParams(top = 8))
+        root.addView(button(R.string.btn_add_widget, 0, TEXT) { pinWidget() }, cardParams(top = 8))
+        root.addView(button(R.string.btn_battery, 0, TEXT) { requestUnrestricted() }, cardParams(top = 8))
         root.addView(text(13f, MUTED).apply { setText(R.string.main_hint); setPadding(0, dp(16), 0, 0) })
 
-        setContentView(ScrollView(this).apply { setBackgroundColor(BG); addView(root) })
+        val page = FrameLayout(this).apply { background = pageBackground() }
+        page.addView(ScrollView(this).apply { isFillViewport = true; addView(root) })
+        setContentView(page)
     }
 
     override fun onStart() {
@@ -188,7 +200,7 @@ class MainActivity : Activity() {
 
         levelView.text = l.level?.let { number("$it", "%") } ?: none
         levelBar.progress = (l.level ?: 0) * 10
-        levelBar.progressTintList = ColorStateList.valueOf(accent)
+        barFill.setColor(accent)
         stateView.text = getString(
             when {
                 l.full -> R.string.full
@@ -230,7 +242,27 @@ class MainActivity : Activity() {
     private fun card() = LinearLayout(this).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(dp(18), dp(16), dp(18), dp(16))
-        background = GradientDrawable().apply { setColor(CARD); cornerRadius = dp(20).toFloat() }
+        background = glass(24)
+    }
+
+    /** Frosted-glass look: light gradient fill + hairline edge. */
+    private fun glass(radiusDp: Int) = GradientDrawable(
+        GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0x33FFFFFF, 0x0DFFFFFF),
+    ).apply {
+        cornerRadius = dp(radiusDp).toFloat()
+        setStroke(dp(1), 0x40FFFFFF)
+    }
+
+    /** Deep gradient with a violet glow top-left and a mint glow bottom-right. */
+    private fun pageBackground(): LayerDrawable {
+        val base = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(TOP, MID, BOTTOM))
+        fun glow(cx: Float, cy: Float, color: Int) = GradientDrawable().apply {
+            gradientType = GradientDrawable.RADIAL_GRADIENT
+            gradientRadius = dp(380).toFloat()
+            setGradientCenter(cx, cy)
+            colors = intArrayOf((0x99 shl 24) or (color and 0xFFFFFF), color and 0xFFFFFF)
+        }
+        return LayerDrawable(arrayOf(base, glow(0.1f, 0.05f, 0x9B7BFF), glow(0.95f, 0.95f, 0x2CF2C0)))
     }
 
     private fun cardParams(top: Int) = LinearLayout.LayoutParams(
@@ -265,7 +297,10 @@ class MainActivity : Activity() {
         setTextColor(fg)
         textSize = 15f
         stateListAnimator = null
-        background = GradientDrawable().apply { setColor(bg); cornerRadius = dp(16).toFloat() }
+        background = if (bg == CHARGE) {
+            GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0xFF5CF2B0.toInt(), 0xFF27C9C2.toInt()))
+                .apply { cornerRadius = dp(18).toFloat() }
+        } else glass(18)
         minimumHeight = dp(52)
         setOnClickListener { onClick() }
     }
