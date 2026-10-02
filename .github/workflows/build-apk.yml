@@ -1,0 +1,32 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # AGP 8.5 needs Gradle >= 8.7; no wrapper is committed, so provision it here.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.7"
+
+      - name: Assemble debug APK
+        run: gradle :app:assembleDebug --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BatteryWidget-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
