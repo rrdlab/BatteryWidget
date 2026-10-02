@@ -18,13 +18,7 @@ import java.util.concurrent.TimeUnit
 
 class BatteryWidgetProvider : AppWidgetProvider() {
 
-    override fun onEnabled(context: Context) {
-        WorkManager.getInstance(context).enqueueUniquePeriodicWork(
-            "battery_sampler",
-            ExistingPeriodicWorkPolicy.KEEP,
-            PeriodicWorkRequestBuilder<SampleWorker>(15, TimeUnit.MINUTES).build(),
-        )
-    }
+    override fun onEnabled(context: Context) = schedule(context)
 
     override fun onDisabled(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork("battery_sampler")
@@ -42,6 +36,15 @@ class BatteryWidgetProvider : AppWidgetProvider() {
     companion object {
         const val ACTION_REFRESH = "com.rrdlab.batterywidget.REFRESH"
         private const val DIM = 0x99FFFFFF.toInt()
+
+        /** Periodic sampler; KEEP makes repeated calls (widget added, app opened) idempotent. */
+        fun schedule(context: Context) {
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+                "battery_sampler",
+                ExistingPeriodicWorkPolicy.KEEP,
+                PeriodicWorkRequestBuilder<SampleWorker>(15, TimeUnit.MINUTES).build(),
+            )
+        }
 
         /** Takes a sample and redraws every widget instance. */
         fun refresh(context: Context) {

@@ -11,4 +11,10 @@
     <string name="to_full">до 100%% %1$s</string>
     <string name="hours_minutes">%1$d ч %2$d м</string>
     <string name="minutes">%1$d м</string>
+    <string name="widget_description">Скорость разряда/заряда батареи и прогноз</string>
+    <string name="main_hint">Добавьте виджет на рабочий стол (кнопка ниже или долгое нажатие на рабочем столе → Виджеты). Для стабильных замеров разрешите приложению работу в фоне без ограничений и включите автозапуск в настройках системы.</string>
+    <string name="btn_add_widget">Добавить виджет</string>
+    <string name="btn_battery">Снять ограничения батареи</string>
+    <string name="pin_unsupported">Лаунчер не умеет добавлять виджеты из приложения: долгое нажатие на рабочем столе → Виджеты</string>
+    <string name="already_unrestricted">Ограничения уже сняты</string>
 </resources>

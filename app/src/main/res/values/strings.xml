@@ -11,4 +11,10 @@
     <string name="to_full">%1$s to full</string>
     <string name="hours_minutes">%1$d h %2$d m</string>
     <string name="minutes">%1$d m</string>
+    <string name="widget_description">Battery discharge/charge rate and forecast</string>
+    <string name="main_hint">Add the widget to the home screen (button below, or long-press the home screen → Widgets). For stable measurements allow unrestricted background activity for this app and enable autostart in the system settings.</string>
+    <string name="btn_add_widget">Add widget</string>
+    <string name="btn_battery">Unrestrict battery usage</string>
+    <string name="pin_unsupported">The launcher cannot add widgets from an app: long-press the home screen → Widgets</string>
+    <string name="already_unrestricted">Already unrestricted</string>
 </resources>
