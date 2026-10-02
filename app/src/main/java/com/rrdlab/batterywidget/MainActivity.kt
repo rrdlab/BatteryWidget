@@ -3,16 +3,14 @@ package com.rrdlab.batterywidget
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
-import android.content.BroadcastReceiver
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.ViewGroup
 import android.widget.Button
@@ -22,23 +20,34 @@ import android.widget.TextView
 import android.widget.Toast
 
 /**
- * Launcher entry point. Gives the app a visible icon (OEM launchers hide apps without one and
- * keep never-launched apps in the "stopped" state), starts sampling, and offers one-tap setup.
+ * Launcher entry point: visible icon, one-tap setup, and a live view of the same two lines as the widget.
+ * Measurement runs only for a minute at a time: 5 s step when the window opens, 1 s step after "Refresh".
  */
 class MainActivity : Activity() {
 
     private lateinit var levelView: TextView
     private lateinit var dischargeView: TextView
     private lateinit var chargeView: TextView
+    private lateinit var statusView: TextView
+
     private val handler = Handler(Looper.getMainLooper())
+    private val readings = ArrayDeque<Long>()   // instantaneous current, µA; window = last MAX_READINGS
+    private var stepMs = OPEN_STEP_MS
+    private var endAt = 0L
+    private var running = false
+
     private val ticker = object : Runnable {
         override fun run() {
+            val left = endAt - SystemClock.elapsedRealtime()
             update()
-            handler.postDelayed(this, UPDATE_MS)
+            if (left <= 0) {
+                running = false
+                showStatus()
+                return
+            }
+            showStatus()
+            handler.postDelayed(this, stepMs)
         }
-    }
-    private val batteryReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = update()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,31 +61,56 @@ class MainActivity : Activity() {
         }
         levelView = TextView(this).apply { textSize = 28f }
         dischargeView = TextView(this).apply { textSize = 20f; setPadding(0, pad / 2, 0, 0) }
-        chargeView = TextView(this).apply { textSize = 20f; setPadding(0, pad / 2, 0, pad) }
+        chargeView = TextView(this).apply { textSize = 20f; setPadding(0, pad / 2, 0, pad / 2) }
+        statusView = TextView(this).apply { textSize = 13f; alpha = 0.7f }
         root.addView(levelView)
         root.addView(dischargeView)
         root.addView(chargeView)
-        root.addView(TextView(this).apply { setText(R.string.main_hint); textSize = 14f })
+        root.addView(statusView)
+        root.addView(button(R.string.btn_refresh) { start(FAST_STEP_MS) })
         root.addView(button(R.string.btn_add_widget) { pinWidget() })
         root.addView(button(R.string.btn_battery) { requestUnrestricted() })
+        root.addView(TextView(this).apply {
+            setText(R.string.main_hint); textSize = 14f; setPadding(0, pad, 0, 0)
+        })
         setContentView(ScrollView(this).apply { addView(root) })
     }
 
     override fun onStart() {
         super.onStart()
-        registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-        handler.post(ticker)
+        start(OPEN_STEP_MS)
     }
 
     override fun onStop() {
         handler.removeCallbacks(ticker)
-        unregisterReceiver(batteryReceiver)
+        running = false
         super.onStop()
     }
 
-    /** Takes a sample, redraws widgets and shows the same two lines on this screen. */
+    /** Starts a [WINDOW_MS] measurement run with the given step; restarts any run in progress. */
+    private fun start(step: Long) {
+        handler.removeCallbacks(ticker)
+        readings.clear()
+        stepMs = step
+        endAt = SystemClock.elapsedRealtime() + WINDOW_MS
+        running = true
+        handler.post(ticker)
+    }
+
+    private fun showStatus() {
+        val left = ((endAt - SystemClock.elapsedRealtime()) / 1000).toInt().coerceAtLeast(0)
+        statusView.text =
+            if (running) getString(R.string.status_running, (stepMs / 1000).toInt(), left)
+            else getString(R.string.status_paused)
+    }
+
+    /** One measurement: read current, redraw widgets, show the same two lines here. */
     private fun update() {
-        val l = BatteryWidgetProvider.refresh(this)
+        BatteryStore.read(this)?.currentUa?.takeIf { it != 0L }?.let {
+            readings.addLast(it)
+            while (readings.size > MAX_READINGS) readings.removeFirst()
+        }
+        val l = BatteryWidgetProvider.refresh(this, readings.toList())
         levelView.text = l.level?.let { getString(R.string.level, it) } ?: getString(R.string.no_data)
         dischargeView.text = l.discharge
         dischargeView.alpha = if (l.dischargeLive) 1f else 0.6f
@@ -117,6 +151,9 @@ class MainActivity : Activity() {
     }
 
     private companion object {
-        const val UPDATE_MS = 30_000L
+        const val WINDOW_MS = 60_000L
+        const val OPEN_STEP_MS = 5_000L
+        const val FAST_STEP_MS = 1_000L
+        const val MAX_READINGS = 12   // ~1 min at 5 s, ~12 s at 1 s: enough to average out load spikes
     }
 }

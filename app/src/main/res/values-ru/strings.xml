@@ -18,4 +18,7 @@
     <string name="pin_unsupported">Лаунчер не умеет добавлять виджеты из приложения: долгое нажатие на рабочем столе → Виджеты</string>
     <string name="already_unrestricted">Ограничения уже сняты</string>
     <string name="level">Батарея: %1$d%%</string>
+    <string name="btn_refresh">Обновить</string>
+    <string name="status_running">Замер каждые %1$d с · осталось %2$d с</string>
+    <string name="status_paused">Остановлено. «Обновить» — минута с шагом 1 с.</string>
 </resources>

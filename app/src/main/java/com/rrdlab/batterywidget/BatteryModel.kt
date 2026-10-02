@@ -37,6 +37,23 @@ object Estimator {
         return Rate(pctPerHour, if (useUah) mag / 1000.0 else null)
     }
 
+    /**
+     * Rate from instantaneous current readings (µA, mean of |I| over the given readings; averaging
+     * is the low-pass filter against load spikes). Sign conventions differ between vendors, so only
+     * the magnitude is used and the regime comes from the charging state. Some firmware reports mA
+     * instead of µA: a typical phone draws >= 10 mA = 10 000 µA, so values below that are scaled.
+     * Needs the capacity C [µAh] to convert to %/h = I/C·100.
+     */
+    fun instantRate(readingsUa: List<Long>, capacityUah: Double?): Rate? {
+        if (capacityUah == null || capacityUah <= 0) return null
+        val mags = readingsUa.map { Math.abs(it).toDouble() }.filter { it > 0 }
+            .map { if (it < 10_000) it * 1000 else it }
+        if (mags.isEmpty()) return null
+        val ua = mags.average()
+        val pct = ua / capacityUah * 100.0
+        return if (pct < MIN_RATE_PCT_H) null else Rate(pct, ua / 1000.0)
+    }
+
     private fun olsSlope(x: List<Double>, y: List<Double>): Double? {
         val n = x.size
         val mx = x.average()

@@ -18,4 +18,7 @@
     <string name="pin_unsupported">The launcher cannot add widgets from an app: long-press the home screen → Widgets</string>
     <string name="already_unrestricted">Already unrestricted</string>
     <string name="level">Battery: %1$d%%</string>
+    <string name="btn_refresh">Refresh</string>
+    <string name="status_running">Measuring every %1$d s · %2$d s left</string>
+    <string name="status_paused">Paused. Tap Refresh: 1 minute at 1 s step.</string>
 </resources>

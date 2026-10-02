@@ -47,12 +47,12 @@ class BatteryWidgetProvider : AppWidgetProvider() {
         }
 
         /** Takes a sample and redraws every widget instance. */
-        fun refresh(context: Context): Lines {
+        fun refresh(context: Context, instant: List<Long> = emptyList()): Lines {
             val snap = BatteryStore.read(context)
             if (snap != null) BatteryStore.record(context, snap.sample)
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, BatteryWidgetProvider::class.java))
-            val l = lines(context, snap)
+            val l = lines(context, snap, instant)
             if (ids.isNotEmpty()) {
                 val views = render(context, l)
                 ids.forEach { mgr.updateAppWidget(it, views) }
@@ -63,13 +63,15 @@ class BatteryWidgetProvider : AppWidgetProvider() {
         /** Texts for both lines; shared by the widget and the in-app screen. */
         data class Lines(val level: Int?, val discharge: String, val charge: String, val dischargeLive: Boolean, val chargeLive: Boolean)
 
-        fun lines(c: Context, snap: BatteryStore.Snapshot?): Lines {
+        fun lines(c: Context, snap: BatteryStore.Snapshot?, instantUa: List<Long> = emptyList()): Lines {
             if (snap == null) {
                 val n = c.getString(R.string.no_data)
                 return Lines(null, n, n, false, false)
             }
             val cur = snap.sample
-            val live = Estimator.rate(BatteryStore.load(c), cur.t, BatteryStore.capacityUah(c))
+            val cap = BatteryStore.capacityUah(c)
+            // Fast mode (app open) uses averaged instantaneous current; otherwise the slow counter regression.
+            val live = Estimator.instantRate(instantUa, cap) ?: Estimator.rate(BatteryStore.load(c), cur.t, cap)
             if (live != null) BatteryStore.saveRate(c, cur.charging, live)
             val dis = if (!cur.charging) live else null
             val chg = if (cur.charging) live else null
