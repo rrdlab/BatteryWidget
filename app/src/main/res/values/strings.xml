@@ -17,4 +17,5 @@
     <string name="btn_battery">Unrestrict battery usage</string>
     <string name="pin_unsupported">The launcher cannot add widgets from an app: long-press the home screen → Widgets</string>
     <string name="already_unrestricted">Already unrestricted</string>
+    <string name="level">Battery: %1$d%%</string>
 </resources>

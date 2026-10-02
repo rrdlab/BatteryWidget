@@ -47,29 +47,26 @@ class BatteryWidgetProvider : AppWidgetProvider() {
         }
 
         /** Takes a sample and redraws every widget instance. */
-        fun refresh(context: Context) {
+        fun refresh(context: Context): Lines {
             val snap = BatteryStore.read(context)
             if (snap != null) BatteryStore.record(context, snap.sample)
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, BatteryWidgetProvider::class.java))
-            if (ids.isEmpty()) return
-            val views = render(context, snap)
-            ids.forEach { mgr.updateAppWidget(it, views) }
+            val l = lines(context, snap)
+            if (ids.isNotEmpty()) {
+                val views = render(context, l)
+                ids.forEach { mgr.updateAppWidget(it, views) }
+            }
+            return l
         }
 
-        private fun render(c: Context, snap: BatteryStore.Snapshot?): RemoteViews {
-            val v = RemoteViews(c.packageName, R.layout.widget_battery)
-            val tap = PendingIntent.getBroadcast(
-                c, 0,
-                Intent(c, BatteryWidgetProvider::class.java).setAction(ACTION_REFRESH),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            v.setOnClickPendingIntent(R.id.root, tap)
+        /** Texts for both lines; shared by the widget and the in-app screen. */
+        data class Lines(val level: Int?, val discharge: String, val charge: String, val dischargeLive: Boolean, val chargeLive: Boolean)
 
+        fun lines(c: Context, snap: BatteryStore.Snapshot?): Lines {
             if (snap == null) {
-                v.setTextViewText(R.id.line_discharge, c.getString(R.string.no_data))
-                v.setTextViewText(R.id.line_charge, c.getString(R.string.no_data))
-                return v
+                val n = c.getString(R.string.no_data)
+                return Lines(null, n, n, false, false)
             }
             val cur = snap.sample
             val live = Estimator.rate(BatteryStore.load(c), cur.t, BatteryStore.capacityUah(c))
@@ -77,15 +74,13 @@ class BatteryWidgetProvider : AppWidgetProvider() {
             val dis = if (!cur.charging) live else null
             val chg = if (cur.charging) live else null
 
-            // Line 1: discharge rate + remaining runtime. Active ⇒ live value, else last measured (dimmed).
+            // Line 1: discharge rate + remaining runtime. Active => live value, else last measured (dimmed).
             val disRate = dis ?: BatteryStore.lastRate(c, false)
             val line1 = line(
                 c, c.getString(R.string.discharge_prefix), disRate,
                 disRate?.let { c.getString(R.string.left, fmt(c, Estimator.hoursToEmpty(cur.pct, it))) },
                 if (!cur.charging) c.getString(R.string.measuring) else c.getString(R.string.no_data),
             )
-            v.setTextViewText(R.id.line_discharge, line1)
-            v.setTextColor(R.id.line_discharge, if (dis != null || !cur.charging) Color.WHITE else DIM)
 
             // Line 2: charge rate + time to 100 %. Prefer the system estimate (it models CC-CV taper).
             val chgRate = chg ?: BatteryStore.lastRate(c, true)
@@ -100,8 +95,21 @@ class BatteryWidgetProvider : AppWidgetProvider() {
                 c, c.getString(R.string.charge_prefix), chgRate, toFull,
                 if (cur.charging) c.getString(R.string.measuring) else c.getString(R.string.no_data),
             )
-            v.setTextViewText(R.id.line_charge, line2)
-            v.setTextColor(R.id.line_charge, if (cur.charging) Color.WHITE else DIM)
+            return Lines(Math.round(cur.pct), line1, line2, !cur.charging, cur.charging)
+        }
+
+        private fun render(c: Context, l: Lines): RemoteViews {
+            val v = RemoteViews(c.packageName, R.layout.widget_battery)
+            val tap = PendingIntent.getBroadcast(
+                c, 0,
+                Intent(c, BatteryWidgetProvider::class.java).setAction(ACTION_REFRESH),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            v.setOnClickPendingIntent(R.id.root, tap)
+            v.setTextViewText(R.id.line_discharge, l.discharge)
+            v.setTextColor(R.id.line_discharge, if (l.dischargeLive) Color.WHITE else DIM)
+            v.setTextViewText(R.id.line_charge, l.charge)
+            v.setTextColor(R.id.line_charge, if (l.chargeLive) Color.WHITE else DIM)
             return v
         }
 

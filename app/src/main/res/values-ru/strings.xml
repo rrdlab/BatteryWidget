@@ -17,4 +17,5 @@
     <string name="btn_battery">Снять ограничения батареи</string>
     <string name="pin_unsupported">Лаунчер не умеет добавлять виджеты из приложения: долгое нажатие на рабочем столе → Виджеты</string>
     <string name="already_unrestricted">Ограничения уже сняты</string>
+    <string name="level">Батарея: %1$d%%</string>
 </resources>
