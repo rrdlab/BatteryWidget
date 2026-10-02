@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Скорость батареи</string>
+    <string name="discharge_prefix">Разряд</string>
+    <string name="charge_prefix">Заряд</string>
+    <string name="measuring">измеряю…</string>
+    <string name="no_data">нет данных</string>
+    <string name="full">заряжен</string>
+    <string name="rate_pct">%1$s %%/ч</string>
+    <string name="rate_ma">%1$d мА</string>
+    <string name="left">осталось %1$s</string>
+    <string name="to_full">до 100%% %1$s</string>
+    <string name="hours_minutes">%1$d ч %2$d м</string>
+    <string name="minutes">%1$d м</string>
+</resources>

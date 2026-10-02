@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Battery Rate</string>
+    <string name="discharge_prefix">Discharge</string>
+    <string name="charge_prefix">Charge</string>
+    <string name="measuring">measuring…</string>
+    <string name="no_data">no data yet</string>
+    <string name="full">fully charged</string>
+    <string name="rate_pct">%1$s %%/h</string>
+    <string name="rate_ma">%1$d mA</string>
+    <string name="left">%1$s left</string>
+    <string name="to_full">%1$s to full</string>
+    <string name="hours_minutes">%1$d h %2$d m</string>
+    <string name="minutes">%1$d m</string>
+</resources>
