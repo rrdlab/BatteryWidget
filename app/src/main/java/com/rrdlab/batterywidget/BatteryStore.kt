@@ -14,7 +14,8 @@ object BatteryStore {
     private const val MAX_SAMPLES = 200
     private const val MIN_GAP_MS = 60_000L
 
-    data class Snapshot(val sample: Sample, val full: Boolean, val systemChargeMs: Long?, val currentUa: Long)
+    data class Snapshot(val sample: Sample, val full: Boolean, val systemChargeMs: Long?, val currentUa: Long,
+                    val voltageMv: Int, val tempDeci: Int)
 
     private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -33,7 +34,9 @@ object BatteryStore {
         } else null
         // Long.MIN_VALUE = property unsupported
         val ua = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW).takeIf { it != Long.MIN_VALUE } ?: 0L
-        return Snapshot(Sample(now, uah, level * 100f / scale, charging), full, sys, ua)
+        val mv = i.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0)
+        val temp = i.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, Int.MIN_VALUE)  // tenths of °C
+        return Snapshot(Sample(now, uah, level * 100f / scale, charging), full, sys, ua, mv, temp)
     }
 
     @Synchronized

@@ -21,4 +21,19 @@
     <string name="btn_refresh">Refresh</string>
     <string name="status_running">Measuring every %1$d s · %2$d s left</string>
     <string name="status_paused">Paused. Tap Refresh: 1 minute at 1 s step.</string>
+    <string name="state_charging">Charging</string>
+    <string name="state_discharging">Discharging</string>
+    <string name="label_power_in">Charging power</string>
+    <string name="label_power_out">Power draw</string>
+    <string name="label_voltage">Voltage</string>
+    <string name="label_current_in">Charge current</string>
+    <string name="label_current_out">Discharge current</string>
+    <string name="label_temp">Temperature</string>
+    <string name="label_capacity">Capacity (est.)</string>
+    <string name="label_forecast">Forecast</string>
+    <string name="unit_w">W</string>
+    <string name="unit_v">V</string>
+    <string name="unit_ma">mA</string>
+    <string name="unit_mah">mAh</string>
+    <string name="unit_c">°C</string>
 </resources>

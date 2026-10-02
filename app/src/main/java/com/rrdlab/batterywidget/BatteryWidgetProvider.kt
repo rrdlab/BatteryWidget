@@ -61,7 +61,12 @@ class BatteryWidgetProvider : AppWidgetProvider() {
         }
 
         /** Texts for both lines; shared by the widget and the in-app screen. */
-        data class Lines(val level: Int?, val discharge: String, val charge: String, val dischargeLive: Boolean, val chargeLive: Boolean)
+        data class Lines(
+            val level: Int?, val discharge: String, val charge: String,
+            val dischargeLive: Boolean, val chargeLive: Boolean,
+            val volts: Double? = null, val ma: Double? = null, val watts: Double? = null,
+            val tempC: Double? = null, val capMah: Double? = null, val full: Boolean = false,
+        )
 
         fun lines(c: Context, snap: BatteryStore.Snapshot?, instantUa: List<Long> = emptyList()): Lines {
             if (snap == null) {
@@ -97,7 +102,17 @@ class BatteryWidgetProvider : AppWidgetProvider() {
                 c, c.getString(R.string.charge_prefix), chgRate, toFull,
                 if (cur.charging) c.getString(R.string.measuring) else c.getString(R.string.no_data),
             )
-            return Lines(Math.round(cur.pct), line1, line2, !cur.charging, cur.charging)
+            
+            // P = U·I: terminal voltage times mean current magnitude (direction comes from the charging state).
+            val volts = snap.voltageMv.takeIf { it > 0 }?.let { it / 1000.0 }
+            val ua = Estimator.meanMagnitudeUa(instantUa.ifEmpty { listOf(snap.currentUa) })
+            val watts = if (ua != null && volts != null) ua * 1e-6 * volts else null
+            return Lines(
+                Math.round(cur.pct), line1, line2, !cur.charging, cur.charging,
+                volts, ua?.div(1000.0), watts,
+                snap.tempDeci.takeIf { it != Int.MIN_VALUE }?.let { it / 10.0 },
+                cap?.div(1000.0), snap.full,
+            )
         }
 
         private fun render(c: Context, l: Lines): RemoteViews {

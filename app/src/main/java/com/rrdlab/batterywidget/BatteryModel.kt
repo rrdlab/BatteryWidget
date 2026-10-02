@@ -44,12 +44,16 @@ object Estimator {
      * instead of µA: a typical phone draws >= 10 mA = 10 000 µA, so values below that are scaled.
      * Needs the capacity C [µAh] to convert to %/h = I/C·100.
      */
-    fun instantRate(readingsUa: List<Long>, capacityUah: Double?): Rate? {
-        if (capacityUah == null || capacityUah <= 0) return null
+    /** Mean |I| in µA over the readings (see [instantRate] for unit handling); null if none usable. */
+    fun meanMagnitudeUa(readingsUa: List<Long>): Double? {
         val mags = readingsUa.map { Math.abs(it).toDouble() }.filter { it > 0 }
             .map { if (it < 10_000) it * 1000 else it }
-        if (mags.isEmpty()) return null
-        val ua = mags.average()
+        return if (mags.isEmpty()) null else mags.average()
+    }
+
+    fun instantRate(readingsUa: List<Long>, capacityUah: Double?): Rate? {
+        if (capacityUah == null || capacityUah <= 0) return null
+        val ua = meanMagnitudeUa(readingsUa) ?: return null
         val pct = ua / capacityUah * 100.0
         return if (pct < MIN_RATE_PCT_H) null else Rate(pct, ua / 1000.0)
     }

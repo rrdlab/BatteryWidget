@@ -21,4 +21,19 @@
     <string name="btn_refresh">Обновить</string>
     <string name="status_running">Замер каждые %1$d с · осталось %2$d с</string>
     <string name="status_paused">Остановлено. «Обновить» — минута с шагом 1 с.</string>
+    <string name="state_charging">Заряжается</string>
+    <string name="state_discharging">Разряжается</string>
+    <string name="label_power_in">Мощность заряда</string>
+    <string name="label_power_out">Расход энергии</string>
+    <string name="label_voltage">Напряжение</string>
+    <string name="label_current_in">Ток заряда</string>
+    <string name="label_current_out">Ток разряда</string>
+    <string name="label_temp">Температура</string>
+    <string name="label_capacity">Ёмкость (оценка)</string>
+    <string name="label_forecast">Прогноз</string>
+    <string name="unit_w">Вт</string>
+    <string name="unit_v">В</string>
+    <string name="unit_ma">мА</string>
+    <string name="unit_mah">мА·ч</string>
+    <string name="unit_c">°C</string>
 </resources>
